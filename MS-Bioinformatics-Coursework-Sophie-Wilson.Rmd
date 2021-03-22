@@ -1,0 +1,657 @@
+---
+output: html_document
+---
+
+<center><h1> MSc Bioinformatics Coursework </h1></center>
+<center><h3> Sophie Wilson </h3></center>
+<center><h4> 11/12/2020 </h4></center>
+
+
+
+
+First load some librarys that I will use.
+```{r results = FALSE, warning=FALSE}
+library(ggplot2)
+library(knitr)
+```
+
+
+<center><h2> **Snakes and ladders** </h2></center>
+
+
+### Exercise 1:  
+**Examine the following piece of code which simulates movement around the board. Add comments to the code and describe what each line does. [3 MARKS]**
+
+This code simulates dice rolling through a board. 
+```{r}
+max_turns <- 50 # First we set the maximum turns a 'player' can have to 50. So the For loop will run 50 times.
+position <- 0 # Set a starting position on the board.
+max_position <- 60 # Set an upper bound for movement to keep the simulation on the board. 
+n_sides_die <- 6 # Setting the possible dice roll outcomes to 6, as it is a six sided dice.
+
+# This for loop is simulating player movement through dice rolling. It loops through max_turns and changes the variables we set above to update the position.
+for ( turn in 1:max_turns ){
+  die_roll <- sample.int(n_sides_die, 1) # Simulating dice roll
+  position <- position + die_roll # Updating position
+  if ( position >= max_position ){  # If the player reaches the end of the board the loop ends. 
+    break
+  }
+}
+ 
+```
+
+### Exercise 2:   
+**Extend the code above to incorporate the effect of the snakes and ladders. Simulate the play for a single player only. [4 MARKS]**
+
+
+First I set up the code to allow for repetitions by setting a number of simulations to run.
+I also add a variable to record the number of turns taken.
+```{r}
+num_simulations <- 200
+total_turns_taken <- rep(0, num_simulations)
+```
+
+I create an outer loop to loop through num_simulations, this allows me to get information about the average game. This loop continues until the num_simulations has been reached. 
+
+- This loop changes the above code to more realistically represent a snakes and ladders game. 
+- To set up the game I add variables to count the turns and player position. 
+- I also add lists to show where the snakes and ladders start and end on the board (I got this information from the board used in the coursework instructions).
+
+Next I add a nested for loop to simulate individual games. 
+
+- First I update the number of turns
+- The function sample.int outputs a random number from 1-6 to simulate die rolls. 
+- I then update the player position and will use this to check if the player has landed on a snake or ladder start square using if statements.
+- I check if the player has landed on a square that is in the start column of the ladder_df data frame.
+  - If this is true the position is updated to the corresponding vector in the check_ladder end column. 
+- I check if the player has landed on a square that is in the start column of the snakes_df data frame.
+  - If the player is on a snake start square the if statement moves them to the corresponding snake end square and updates their position. 
+
+- Finally I check if the position is greater or equal to the max_position.
+  - If this is true the player has finished the game and the loop ends. If this is not true the loop continues until max_turns have been used, at this point the game ends anyway.
+
+Total turns taken are recorded for each game. 
+```{r}
+for (x in 1:num_simulations){
+  max_turns <- 500 # Set the maximum player turns (die rolls)
+  num_turns <- 0 # Store number of turns taken
+  position <- 0 # Set a starting position on the board.
+  max_position <- 100 # Set an upper bound for movement to keep the simulation on the board. 
+  n_sides_die <- 6 # Make a variable setting the possible dice roll outcomes.
+  
+  # Set the start and end positions of the snakes and ladders.
+  ladder_df <- data.frame(start=c(1,4,9,21,28,36,51,71,80), end=c(8,14,31,42,84,44,67,91,100))
+  snakes_df <- data.frame(start=c(98,95,93,87,64,62,56,49,47,16), end=c(78,75,73,24,60,19,53,11,26,6))
+  
+  # This for loop loops through max_turns and changes the variables we set above.
+  for ( turn in 1:max_turns ){
+    num_turns = num_turns + 1 
+    die_roll <- sample.int(n_sides_die, 1) # Making a variable to store the results of the die roll. 
+    position <- position + die_roll # Setting a new position.
+    check_ladder <- grep(paste("^", position, "$", sep=""), ladder_df$start) # Check if player is at the start of a ladder.
+    if (length(check_ladder) > 0){ # If position is on a ladder, go to end of the ladder.
+       position = ladder_df$end[check_ladder[1]]
+    }
+    check_snakes <-  grep(paste("^", position, "$", sep=""), snakes_df$start) # Check if player is at the start of a snake.
+    if (length(check_snakes) > 0){ # If position is on a snake, go to end of the snake
+      position = snakes_df$end[check_snakes[1]]
+    }
+    if ( position >= max_position ){ # Check if player is at the end. 
+      break # Exits the for loop
+    }
+  }
+  total_turns_taken[x] = num_turns 
+}
+```
+
+### Exercise 3:
+**Use your simulation code to estimate the expected number of turns for a single player to reach the finish point. Compute the variance of the number of turns required. Plot a histogram of turns required across repeats. [3 MARKS]**
+
+I estimate the expected turns for a single player to reach the finishing point by averaging the total_turns_taken list. Then I calculate the variance and standard deviation to describe the distribution of turns taken.
+```{r}
+cat('Average turns:', format(round(mean(total_turns_taken), 2), nsmall = 2))
+cat('Variance:', format(round(var(total_turns_taken), 2), nsmall = 2))
+cat('Standard deviation:', format(round(sd(total_turns_taken), 2), nsmall = 2))
+```
+
+Lastly, I turn total_turns_taken into a data frame and plot it in a histogram to further see the distribution. 
+```{r fig.align="center"}
+plot_data <- data.frame(total_turns_taken)
+
+ggplot(plot_data, aes(x= total_turns_taken)) +
+  geom_histogram(binwidth=3, fill='red', alpha=0.75, colour='grey') +
+  labs(x='Number of turns taken', y= 'Frequency') +
+  ggtitle(~underline('Variance in Snakes and Ladders turns', x='Number of turns taken', y= 'Frequency')) +
+  theme(plot.title = element_text(hjust=0.5)) 
+```
+
+
+<center><h2> **Data Expression Analysis** </h2></center>
+
+## **2.1 Principal Components Analysis**
+
+### Exercise 2.1.1:
+**Study the following code example and add comments to describe what it does: [2 MARKS]**
+
+First load the data-set and library that will be used.
+```{r results = FALSE, warning=FALSE, message=FALSE}
+load("assess_data_20.Rdata")
+library(tidyverse)
+```
+
+
+Next the matrix Y is transposed and +1 is added to all values to ensure there are no 0's in the dataset, it makes minimal difference as the dataset is large. Then use log10 to scale the data so it is all on a similar scale. 
+```{r}
+pca_x <- t(log(Y + 1))
+```
+
+Then PCA analysis is performed on matrix pca_x, values are centred around 0 and scaled to have unit variance.
+```{r}
+pca_res1 <- prcomp(pca_x, center = TRUE, scale = TRUE)
+```
+
+The values of each sample are converted in terms of principle components of pca_res1 into a data frame so that we can plot it. Also assigning labels to tissue and patient columns. 
+```{r}
+pc_df1 <- data.frame(pca_res1$x, tissue = patient_data$tissue, 
+                     patient = patient_data$patient)
+```
+
+Next plot pc_df1, with PC1 on the x axis and PC2 on the y axis. Setting the shape by tissue and the colour by patient. So there should be two different shapes (as there is only Tumour and Normal tissues), and 15 different colours. Plotting as a point plot with the points of size 6. This shows the distribtuion of multivariate data.
+```{r fig.align="center"}
+ggplot(pc_df1, aes(x = PC1, y = PC2, shape = tissue, col = patient)) +
+  geom_point(size = 6)
+```
+
+-------------------Part 2---------------------
+
+First import the MASS library to use its functions. 
+```{r results = FALSE, warning=FALSE, message=FALSE}
+library(MASS)
+```
+
+Then set some variables. This piece of code is finding the differential expression of only one gene and so the idx gets the index of that gene. 
+x and z describe the patient number and tissue type of all samples in the predefined range being analysed. 
+```{r}
+idx <- 20 # Sets a range to get from the data set
+c_cl <- 1:20 # The first 20 rows from the tissue column in the patient_data data frame
+x <- patient_data$tissue[c_cl] # The first 20 rows from the tissue column in the patient_data data frame
+z <- patient_data$patient[c_cl] # The first 20 rows from the patient column in the patient_data data frame
+```
+
+The tmp dataframe is a combination of thed data to be analysed:
+- y column = the idx row or the columns 1:20 in matrix Y. 
+- x column = x variable.
+- z column = z variable. 
+- lib_size = The sum of rows in range c_cl (1:20) in matrix Y.
+```{r}
+tmp <- data.frame(y = Y[idx, c_cl], x = x, z = z, lib_size = colSums(Y[, c_cl]))
+```
+
+A generalised linear model is then fitted to the data. y is modelled by the linear predictor specified by x + z + lib_size as covariates. It uses Poisson error distribution.
+```{r}
+out <- glm(y ~ x + z + lib_size, data = tmp, family = "poisson")
+```
+
+The p_val variable is assigned to the value in column 2, row 4 in coefficients, in out. This gives us the P value for the Tumour subtype, the p-value is 0 meaning it is highly unlikely to happen by chance.  
+```{r}
+p_val <- summary(out)$coefficients[2, 4]
+```
+
+### Exercise 2.2.1:
+**Using the first part of the code from (1), perform dimensionality reduction using principal components analysis (PCA) for the full data matrix provided.**
+
+- **Plot a scatter plot in the first two principal components.**
+
+- **Identify any problematic samples exploring the scatter plot visually.**
+
+- **Explain briefly why the samples are problematic.**
+
+- **Remove problematic sample pairs from further analysis. [2 MARKS]**
+
+I keep the first part of the example code the same to pre-process the data:
+```{r}
+pca_x <- t(log(Y + 1))
+pca_res1 <- prcomp(pca_x, center = TRUE, scale = TRUE)
+pc_df1 <- data.frame(pca_res1$x, tissue = patient_data$tissue, 
+                     patient = patient_data$patient)
+```
+
+
+I plot pc_df1, with PC1 on the x axis and PC2 on the y axis. Setting the shape by tissue and the colour by patient. So there should be two different shapes (as there is only Tumour and Normal tissues), and 15 different colours. Plotting as a point plot with the points of size 6. 
+```{r fig.align="center"}
+ggplot(pc_df1, aes(x = PC1, y = PC2, shape = tissue, col = patient)) +
+  geom_point(size = 6) + 
+  ggtitle(~underline('PCA plot for patient gene expression')) +
+  theme(plot.title = element_text(hjust=0.5)) 
+```
+
+From this plot you can see that there may be some outliers in the data. This is problematic as it means that the data is misrepresented. PCA is especially susceptible to outliers. 
+
+
+First I try to identify outliers using an ellpise, anything outside of this circle can be counted as an outlier.
+```{r fig.align="center"}
+ggplot(pc_df1, aes(x = PC1, y = PC2)) +
+  geom_point(size = 2) + 
+  stat_ellipse() + 
+  geom_text(label = pc_df1$patient, nudge_x = 20) + 
+  ggtitle(~underline('PCA plot showing outliers in patient gene expression')) +
+  theme(plot.title = element_text(hjust=0.5)) 
+```
+
+This graph shows that there are 3 potential outliers: patient 1, patient 14 and patient 3. Patient 3 is barely an outlier and so I will run some more descriptive graphics to decide whether to remove them. Because the dataset is so small (only 30 patients) I am hesitant to remove data.
+
+```{r fig.align="center"}
+biplot(pca_res1, main = ~underline('Biplot of Samples and Gene names')) 
+  
+```
+
+From this you can see that samples 14 and 16 are outliers and are far from the other data points, it does not show patient 3.
+
+
+I then plot the standard deviation of the PCA.
+```{r fig.align="center"}
+boxplot(pca_res1$sdev, main = ~underline('Standard deviation of PCA output'))
+```
+
+This also shows only 2 outliers. Because of this I will keep patient 3 in the set and decalre it to be not an outlier. 
+
+
+I then remove the outliers from the data sets. Patient 1 corresponds to samples 1 & 16, patient 14 corresponds to samples 14 & 29.
+```{r}
+patient_data_adjusted <- patient_data[-c(1,16,14,29),] 
+Y_adjusted <- Y[,-c(1,16,14,29)]
+pca_adjusted <- t(log(Y + 1)) # transposing and the new data set
+pca_adjusted <- pca_x[-c(1,16,14,29),] # removing outliers from the data set
+```
+
+I rerun the PCA with the new data set to check that the outliers have been removed.
+```{r}
+pca_res2 <- prcomp(pca_adjusted, center = TRUE, scale = TRUE) # performing pca on thew new data
+pc_df2 <- data.frame(pca_res2$x, tissue = patient_data_adjusted$tissue, 
+                     patient = patient_data_adjusted$patient) # making it into a data frame
+```
+
+I then rerun the ellipse plot.
+```{r fig.align="center"} 
+ggplot(pc_df2, aes(x = PC1, y = PC2)) +
+  geom_point(size = 2) + stat_ellipse() + geom_text(label = pc_df2$patient, nudge_x = 20) + theme(plot.title = element_text(hjust=0.5)) + 
+  ggtitle(~underline('PCA plot showing outliers in patient gene expression for adjusted data')) +
+  theme(plot.title = element_text(hjust=0.5)) 
+```
+
+This shows that with the two outliers removed patient 3 fits nicely into the data, it looks like now patient 11 is an outlier but I will not remove them as this is probably due to the data now being closely clustered. 
+
+
+## **2.2 Expression Data analysis**
+
+### Exercise 2.2.3:
+**Use part 2 of the code from (1) to identify genes that are differentially expressed between all normal and tumour samples using Poisson regression. Plot the appropriate log10p-value from your analysis. [2 Marks]**
+
+First I set some variables that will be necessary for analysis. 
+- idx: To loop through all of the genes I want to analyse, this could be done within the for loop but I think setting it as a variable is less rigid. 
+
+- c_cl: This is the range to get from the data set, in this case I want to use the whole data set which is why I set it to the total rows in the data-frame
+
+- x: The tissue column in patient data-set, this is a covariate in the analysis
+
+- y: The patient column of the patient data-set, this is the dependent variable (???)
+
+- gene_labels: The names of the genes that I am analysing. 
+```{r}
+idx <- nrow(Y_adjusted) 
+c_cl <- 1:nrow(patient_data_adjusted) 
+x <- patient_data_adjusted$tissue[c_cl] 
+z <- patient_data_adjusted$patient[c_cl]
+gene_labels <- rownames(Y_adjusted)
+
+```
+
+
+Next I set some empty variables that I will fill in the for loop. 
+P_val will store the sig p_values.
+```{r}
+p_val <- c()
+```
+
+Next I initiate a for loop to loop over all of the genes in the data set. 
+In this for loop I store the name of the gene and make a data frame. This data frame has the count data for the particular gene in each patient. It has columns of x and y that I specified earlier. Lastly it has a column for the library size which is the sum of the row. These will form the basis for the glm formula.
+Within the loop I fit a generalised linear model. y is modelled by the linear predictor specified by x + z + lib_size. This uses the data in tmp data frame. It uses Poisson error distribution. 
+
+Within the for loop I wanted to differentiate between significant and insignificant differential expression. I store the P value in the variable p. If this variable is significant I add the p value and gene name to the empty lists I made earlier.
+```{r warning=FALSE}
+for (m in 1:idx) {
+  tmp <- data.frame(y = Y_adjusted[m, c_cl], x = x, z = z, lib_size = colSums(Y_adjusted[, c_cl])) 
+  out <- glm(y ~ x + z + lib_size, data = tmp, family = "poisson")  
+  p <- summary(out)$coefficients[2,4]
+  p_val[m] <- p
+}
+```
+
+I then add the p values and the index numbers into a date-frame so I can plot it. Setting a significance value and the transforming it also to get a line on my graph.
+```{r}
+p_df = data.frame(p_values = p_val, idx = 1:idx)
+sig = 0.05
+psig = -log10(sig)
+```
+
+Finally I plot the log transformed p values.
+```{r fig.align="center"}
+ggplot(p_df, aes(x = idx, y= -log10(p_values)))+
+  geom_point(size = 1)+
+  geom_hline(yintercept = psig, col= "Red")+
+  labs(y= "-log10 p-values", x = 'Gene index', title = ~underline("p-values with Poisson linear model"))
+```
+
+### Exercise 2.2.4:
+**(+) Perform a regression-based analysis to identify genes differentially expressed between normal and tumour samples including the tissue variable indicating if it is tumour or normal sample. Plot the appropriate log10p-value from your analysis. Compare the p-values with and without inclusion of the tissue type as a covariate, what do you observe? Which of the covariate has the biggest effect? Explain your answer with supporting plots, tables and further analysis if required. [4 Marks]**
+
+
+
+**Checking for Overdispersion**
+
+The data seems to be overly dispersed, this may mean that Poisson regression is not an appropriate model to model this data. To test for over dispersion I will compare the ratio of residual deviance to the degrees of freedom in the model, if the ratio is over 1 then the data is overly dispersed and so Poisson models will not be accurate. To do this I loop through all of the genes and extract the Deviance and Degrees of freedom for each gene. 
+
+```{r, warning=FALSE}
+degreesfreedom <- rep(0, idx)
+deviance <- rep(0, idx)
+for (m in 1:idx) {
+  tmp <- data.frame(y = Y_adjusted[m, c_cl], x = x, z = z, lib_size = colSums(Y_adjusted[, c_cl])) 
+  out <- glm(y ~ x + z + lib_size, data = tmp, family = 'poisson')
+  df <- summary(out)$df.residual
+  degreesfreedom[m] <- df
+  dev <- summary(out)$deviance
+  deviance[m] <- dev
+}
+```
+
+I then check if these ratios are >1, and count the number of genes that have over dispersed data.
+```{r}
+overdispersion <- data.frame(deviance = deviance, degreesfreedom = degreesfreedom, overdispersion = deviance>degreesfreedom)
+```
+
+From this I can see that the data is overly dispersed for all genes, and so a Negative Binomial or Quasi Poisson model would be more appropriate. 
+```{r}
+cat('Number of overdispersed genes:', table(overdispersion$overdispersion)['TRUE'])
+cat('Total number of genes:', idx)
+```
+
+**Implementing a better model to compare with and without tissue type covariate**
+
+I chose to use a Quasi Poisson model as running the Negative Binomial in a large loop gave many errors that seemed to be due to a bug in the MASS package. The choice between Negative Binomial and Quasi Poission depends largely on the type of data you are working with, as I did not have much information about the data I chose to use the model that was easier to work with. 
+
+First I set some empty variables:
+```{r}
+p_val_x <- rep(0, idx)
+p_val_no_x <- rep(0, idx)
+```
+
+First I run the model to acquire P values for the new models with and without x. 
+```{r}
+for (m in 1:idx) {
+  tmp <- data.frame(y = Y_adjusted[m, c_cl], x = x, z = z, lib_size = colSums(Y_adjusted[, c_cl])) 
+  out1 <- glm(y ~ x + z + lib_size, data = tmp, family = "quasipoisson") # Run models to compare
+  out2 <- glm(y ~ z + lib_size, data = tmp, family = 'quasipoisson') 
+  
+  p_val_x[m] <- summary(out1)$coefficients[2,4] # Extract the P values for tissue type and library size so that they can be compared
+  p_val_no_x[m] <- summary(out2)$coefficients[14,4]
+}
+```
+
+I correct the data using Bonferroni correction, this is because I am testing multiple times with multiple covariates, because of this the likelihood of getting a 'statistically relevent' result by chance is increased. Bonferroni is one of the most conservative forms of correction and so I am unlikely to get type 1 errors (false positives) in my data set. 
+```{r}
+correction_x <- p.adjust(p_val_x, method = 'bonferroni', n = length(p_val_x))
+correction_no_x = p.adjust(p_val_no_x, method = "bonferroni", n = length(p_val_no_x))
+```
+
+I check to see how many of the corrected p values are significant with and without x, without x in the model I take the lib_size p value, which may explain a difference in the numbers. 
+```{r}
+cat('Significant P values with x:', sum(correction_x < sig))
+cat('Significant P values without x:', sum(correction_no_x < sig))
+```
+There are far more significant p values, so the model predicts more differential expression, when the tissue type covariate is included in the model. This indicates that the x covariate is important in this model, however it does now show how important it is. I further explore this by creating some plots to compare the two models. 
+
+
+I add these into new data frames so that I am able to plot them.
+```{r}
+df_x <- data.frame(p_values = correction_x, idx = 1:idx)
+df_without_x = data.frame(p_values = correction_no_x, idx = 1:idx)
+```
+
+
+Then I plot the P values of both models, adding in a significance line to see which genes were significantly differentially expressed in Tumour and Normal samples. 
+```{r, figures-side, fig.show="hold", out.width="50%"}
+ggplot(df_x, aes(x = idx, y= -log10(p_values)))+
+  geom_point(size = 1)+
+  geom_hline(yintercept = psig, col= "Red")+
+  labs(y= "-log10 p-values", x = 'Gene index', title = ~underline("P-values with tissue type covariate"))
+
+ggplot(df_without_x, aes(x = idx, y= -log10(p_values)))+
+  geom_point(size = 1)+
+  geom_hline(yintercept = psig, col= "Red")+
+  labs(y= "-log10 adjusted p-values", x = 'Gene index', title = ~underline("P-values without tissue type covariate"))
+```
+This plot suggests that there are more significant p values when including the tissue type covariate, which implies that it is important within the model. However, this is a comparison between the lib-size and tissue type p values and so may not be entirely accurate. 
+
+
+I will compare this to the unadjusted p values to see if the Bonferroni made a difference.
+```{r, figures-side2, fig.show="hold", out.width="50%"}
+
+df_x2 <- data.frame(p_values = p_val_x, idx = 1:idx)
+df_without_x2 = data.frame(p_values = p_val_no_x, idx = 1:idx)
+
+ggplot(df_x2, aes(x = idx, y= -log10(p_values)))+
+  geom_point(size = 1)+
+  geom_hline(yintercept = psig, col= "Red")+
+  labs(y= "-log10 p-values", x = 'Gene index', title = ~underline("P-values with tissue type covariate"))
+
+ggplot(df_without_x2, aes(x = idx, y= -log10(p_values)))+
+  geom_point(size = 1)+
+  geom_hline(yintercept = psig, col= "Red")+
+  labs(y= "-log10 adjusted p-values", x = 'Gene index', title = ~underline("P-values without tissue type covariate"))
+```
+
+Without Bonferroni correction it appears as though removing the tissue type covariate increases the likelihood of significant p values, this is probably due to false positives within the data and highlights why correction for multiple testing is important. 
+
+**Comparing model deviance**
+
+Deviance measures how well a model fits the data, this is the difference in log-likelihood between the fitted model, and the saturated model (where all points are correctly mapped). This provides a good estimate of how accurate a model is, the higher the deviance the less well a model fits the data. Additionally, if a model has a very very low deviance then overfitting may be an issue. I will check multiple different versions of my model to decide which covariates have the biggest impact on my predictions.
+
+First I set some empty variables
+```{r}
+pval <- c()
+pval2 <- c()
+pval3 <- c()
+pval4 <- c()
+pval5 <- c()
+deviance1 <- c()
+deviance2 <- c()
+deviance3 <- c()
+deviance4 <- c()
+deviance5 <- c()
+```
+
+Next I run the different models and keep track of the deviance of each. 
+```{r, warning=FALSE}
+for (m in 1:idx) {
+  tmp <- data.frame(y = Y_adjusted[m, c_cl], x = x, z = z, lib_size = colSums(Y_adjusted[, c_cl]))
+  out <- glm(y ~ x + z + lib_size, data = tmp, family = "poisson") # 
+  p_val[m] <- summary(out)$coefficients[2,4]
+  deviance1[m] <- summary(out)$deviance
+  
+  out2 <- glm(y ~ x + z + lib_size, data = tmp, family ='quasipoisson')
+  pval2[m] <- summary(out2)$coefficients[2,4]
+  deviance2[m] <- summary(out2)$deviance
+  
+  out3 <- glm(y ~ x + lib_size, data = tmp, family ='quasipoisson')
+  pval3[m] <- summary(out3)$coefficients[2,4]
+  deviance3[m] <- summary(out3)$deviance
+  
+  out4 <- glm(y ~ z + lib_size, data = tmp, family ='quasipoisson')
+  pval4[m] <- summary(out4)$coefficients[2,4]
+  deviance4[m] <- summary(out4)$deviance
+  
+  out5 <- glm(y ~ lib_size, data = tmp, family ='quasipoisson')
+  pval5[m] <- summary(out5)$coefficients[2,4]
+  deviance5[m] <- summary(out5)$deviance
+
+}
+```
+
+Then I take the mean deviance of each model and put this into a table to I can easily compare how each change affected the outcome. Additionally I take the difference in deviance between each model and the most complex model (All Covariates) to see which covariate has the greatest individual impact.
+
+```{r, warning=FALSE}
+
+kable(Deviance_comparison2 <- data.frame(Model = c('All Covariates', 'Removing x', 'Removing z', 'Removing x and z'), Deviance = c(mean(deviance2), mean(deviance4), mean(deviance3), mean(deviance5)), Deviance_change = c(0, mean(deviance4)-mean(deviance2), mean(deviance3)-mean(deviance2), mean(deviance5)-mean(deviance2))))
+```
+From this you can see that removing the z covariate, the patient ID, has the greatest impact on the deviance of the model. This is because the two gene counts from each patient are used to classify them and so without this the model does not know which samples to compare. The tissue covariate also has an impact on the deviance, but a much smaller one, meaning it is not the most important covariate to include.
+
+**ANOVA statistical analysis**
+
+ANOVA is a statistical test used to determine if categorical predictors explain variation in numeric outcomes. In this case ANOVA can be used to test if the difference in the outcomes of different GLM models is significant, or if it can be explained by chance. 
+
+I rerun my models and use ANOVA to test if removing x has a significant impact. 
+```{r}
+annovapval <- rep(0, idx)
+for (m in 1:idx) {
+  tmp <- data.frame(y = Y_adjusted[m, c_cl], x = x, z = z, lib_size = colSums(Y_adjusted[, c_cl])) 
+  
+  withx <- glm(y ~ x + z + lib_size, data = tmp, family ='quasipoisson')
+  withoutx <- glm(y ~ z + lib_size, data = tmp, family ='quasipoisson')
+
+  ano <- anova(withx, withoutx, test = 'LRT')$'Pr(>Chi)'
+  annovapval[m] <- ano[2]
+}
+```
+
+I then do the same analysis to test if removing z has a significant impact.
+```{r}
+annovapvalz <- rep(0, idx)
+for (m in 1:idx) {
+  tmp <- data.frame(y = Y_adjusted[m, c_cl], x = x, z = z, lib_size = colSums(Y_adjusted[, c_cl])) 
+  
+  withz <- glm(y ~ x + z + lib_size, data = tmp, family ='quasipoisson')
+  withoutz <- glm(y ~ x + lib_size, data = tmp, family ='quasipoisson')
+
+  anoz <- anova(withz, withoutz, test = 'LRT')$'Pr(>Chi)'
+  annovapvalz[m] <- anoz[2]
+}
+```
+
+I collate my results into a data frame
+```{r}
+annova_df <- data.frame(p_value_x = annovapval, p_value_z = annovapvalz, gene = 1:idx)
+cat('ANOVA P value, removing x:', mean(annova_df$p_value_x))
+cat('ANOVA P value, removing z:', mean(annova_df$p_value_z))
+```
+The result of my ANOVA shows that removing the tissue covariate does have an impact on the model, however this is not significant. It also shows that removing the patient ID covariate is not statistically significant, however it is much more significant than x. This is the result that was expected from the earlier Deviance analysis.
+
+
+**Predicting the data using each model**
+
+To do a final test on these models I will use them to predict values of the data set in order to test which one is the most accurate. 
+
+First I make some empty variables to store my predictions in.
+```{r}
+withxpredict <- data.frame(matrix(ncol = ncol(Y_adjusted), nrow = nrow(Y_adjusted))) 
+rownames(withxpredict) <- rownames(Y_adjusted)
+colnames(withxpredict) <- colnames(Y_adjusted)
+
+noxpredict <- data.frame(matrix(ncol = ncol(Y_adjusted), nrow = nrow(Y_adjusted))) 
+rownames(noxpredict) <- rownames(Y_adjusted)
+colnames(noxpredict) <- colnames(Y_adjusted)
+
+nozpredict <- data.frame(matrix(ncol = ncol(Y_adjusted), nrow = nrow(Y_adjusted))) 
+rownames(nozpredict) <- rownames(Y_adjusted)
+colnames(nozpredict) <- colnames(Y_adjusted)
+```
+
+
+Next I train my models, and get them to predict values for the test data.
+```{r}
+for (m in 1:idx){
+  tmp <- data.frame(y = Y_adjusted[m, c_cl], x = x, z = z, lib_size = colSums(Y_adjusted[, c_cl])) 
+  withx <- glm(y ~ x + z + lib_size, data = tmp, family ='quasipoisson')
+  withoutx <- glm(y ~ z + lib_size, data = tmp, family ='quasipoisson')
+  withoutz <- glm(y ~ x + lib_size, data = tmp, family ='quasipoisson')
+  withxpredict[m,] <- predict(withx, tmp, type = "response")
+  noxpredict[m,] <- predict(withoutx, tmp, type = "response")
+  nozpredict[m,] <- predict(withoutz, tmp, type = "response")
+}
+```
+
+Now I want to see the error in each of the models, I start my making some empty variables to store these in.
+```{r}
+errors_x <- data.frame(matrix(ncol = ncol(Y_adjusted), nrow = nrow(Y_adjusted))) 
+rownames(errors_x) <- rownames(Y_adjusted)
+colnames(errors_x) <- colnames(Y_adjusted)
+
+errors_no_x <- data.frame(matrix(ncol = ncol(Y_adjusted), nrow = nrow(Y_adjusted))) 
+rownames(errors_no_x) <- rownames(Y_adjusted)
+colnames(errors_no_x) <- colnames(Y_adjusted)
+
+errors_no_z <- data.frame(matrix(ncol = ncol(Y_adjusted), nrow = nrow(Y_adjusted))) 
+rownames(errors_no_z) <- rownames(Y_adjusted)
+colnames(errors_no_z) <- colnames(Y_adjusted)
+```
+
+Then I calculate the error for each prediction made by each of the two models I am comparing. I use the difference squared between actual value and predicted value, so that negative errors are accounted for.
+```{r}
+for (r in 1:idx){
+  for (c in 1:26){
+    prediction <- withxpredict[r,c] # Predictions with x and y
+    actual <- Y_adjusted[r,c]
+    difference <- prediction - actual 
+    errors_x[r,c] <- difference^2 
+    
+    prediction2 <- noxpredict[r,c] # Removing x
+    actual2 <- Y_adjusted[r,c]
+    difference2 <- prediction2 - actual2 
+    errors_no_x[r,c] <- difference2^2
+    
+    prediction3 <- nozpredict[r,c] # Removing z
+    actual3 <- Y_adjusted[r,c]
+    difference3 <- prediction3 - actual3 
+    errors_no_z[r,c] <- difference3^2
+  }
+}
+```
+
+I then calculate mean squared error, and the sum of errors for each gene in both
+```{r}
+errors_x$sum <- rowSums(errors_x[,c_cl]) # X and Y included
+errors_x$mse <- errors_x$sum/nrow(errors_x)
+
+errors_no_x$sum <- rowSums(errors_no_x[,c_cl]) # Without x covariate
+errors_no_x$mse <- errors_no_x$sum/nrow(errors_no_x)
+
+errors_no_z$sum <- rowSums(errors_no_z[,c_cl]) # Without z covariate
+errors_no_z$mse <- errors_no_z$sum/nrow(errors_no_z)
+```
+
+I collate these into a data frame so it is easier to plot. 
+```{r}
+compare_errors <- data.frame(with_x = errors_x$mse, without_x = errors_no_x$mse, sum_x = errors_x$sum, sum_without_x = errors_no_x$sum, without_z = errors_no_z$mse, sum_without_z = errors_no_z$sum)
+```
+
+Finally I plot the log() of error that occurs in each model. 
+```{r figures-side3, fig.show="hold", out.width="50%"}
+ggplot(compare_errors, aes(x = log(sum_x), y = log(sum_without_x))) + geom_point() + labs(x= "Log Mean Squared error for with x model", y = "Log mean Squared error for without x model", title = ~underline('Log mean squared error comparisons for models with and without Tissue covariate'))
+
+ggplot(compare_errors, aes(x = log(sum_x), y = log(sum_without_z))) + geom_point() + labs(x= "Log mean Squared error for model including Patient ID", y = "Log mean Squared error for model excluding Patient ID", title = ~underline('Log mean squared error for models with and without Patient ID covariate'))
+      
+```
+This plot shows that the model without the covariate predicts with more error than if you include it, this shows that including x gives a more accurate model. The change is more pronounced when you remove Patient ID covariate from the data, which further provides proof that the z covariate is the most important.
+
+
+In this analysis I should have trained and tested on different data, I tried to split using Patient ID as it is important that both tumour and normal samples are used to train and test in pairs. However the model could not test on new patient ID's as it was used as a covariate, this is a problem with my analysis. 
+
+**Conclusions**
+
+I have done multiple different exploratory and statistical analyses to decide whether the tissue covariate is influential in the model, and whether it should be included for further analysis. I have shown that including the Tissue covariate in the model reduces the error it produces and increases the amount of significant p values, additionally I used ANOVA to conclude that the x covariate significantly influences the model. 
+
+The deviance and model prediction analysis showed that the z variable (patient ID) is likely to be the most important covariate in the model, but x is also important, although not as statistically significant.
+
+It would have been good to use AIC to look into model accuracy with cost in mind, as more complex models are always more accurate, however when using quasipoission this is not possible. 
+
+
+
